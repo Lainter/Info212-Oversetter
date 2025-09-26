@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Matte kwiz</title>
+</head>
+<body>
+    <h1>Petters matte quiz</h1>
+    <p id="question"></p>
+    <input type="text" id="answer" placeholder="Skriv svaret her:)">
+    <button id="submitBtn">Avgi Svar</button>
+    <p id="result"></p>
+    <button id="nextBtn">Neste spørsmål</button>
+
+    <script>
+        let questionEl = document.getElementById('question');
+        let answerEl = document.getElementById('answer');
+        let resultEl = document.getElementById('result');
+        let submitBtn = document.getElementById('submitBtn');
+        let nextBtn = document.getElementById('nextBtn');
+
+        let currentQuestion = "";
+
+        function loadQuestion() {
+            fetch('/get-question/')
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(data) {
+                    currentQuestion = data.question;
+                    questionEl.textContent = currentQuestion;
+                    answerEl.value = "";
+                    resultEl.textContent = "";
+                });
+        }
+
+        submitBtn.addEventListener('click', function() {
+            let userAnswer = answerEl.value;
+            fetch('/check-answer/?question=' + encodeURIComponent(currentQuestion) + '&answer=' + encodeURIComponent(userAnswer))
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(data) {
+                    resultEl.textContent = data.result;
+                });
+        });
+
+        nextBtn.addEventListener('click', loadQuestion);
+
+        loadQuestion();
+    </script>
+</body>
+</html>
