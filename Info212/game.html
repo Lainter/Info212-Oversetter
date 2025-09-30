@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Basic Tetris HTML Game</title>
+  <meta charset="UTF-8">
+   <link rel="stylesheet" href="Stylesheet.css"/>
+  <style>
+  canvas {
+    position: relative;
+    top:25%;
+    border: 1px solid rgb(255, 255, 255);
+  }
+  </style>
+</head>
+<body>
+    <head>
+    <title>Fuolingo</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="Stylesheet.css"/>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="navbar_box">
+                <a href="/Home.html" id="navbar_logo">Fuo</a>
+                <div class="navbar_toggle" id="mobile_menu">
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                </div>
+                <ul class="navbar_menu">    
+                    <li class="navbar_item">
+                        <a href="/Home.html" class="navbar_links"> Home </a>
+                    </li><li class="navbar_item">
+                        <a href="/categories.html" class="navbar_links">Categories</a>
+                    </li> <li class="navbar_item">
+                        <a href="/menu.html" class="navbar_links">Menu</a> </li>
+                    <li class="navbar_item">
+                        <a href="/sign_in.html" class="button"> Sign In! </a>
+                    </li>
+                </ul>
+        </div>
+    </nav>
+    <div class="game_start">
+<canvas width="320" height="640" id="game"></canvas>
+<script>
+
+
+
+function generateSequence() {
+  
+  
+}
+
+// get the next tetromino in the sequence
+function getNextTetromino() {
+  tetrominoSequence.push('I');
+  const matrix = tetrominos['I'];
+  const col = 4;
+  const row = -1 ;
+
+  return {
+    name: 'I',      // name of the piece (L, O, etc.)
+    matrix: matrix,  // the current rotation matrix
+    row: row,        // current row (starts offscreen)
+    col: col         // current col
+  };
+}
+
+// rotate an NxN matrix 90deg
+// @see https://codereview.stackexchange.com/a/186834
+
+// check to see if the new matrix/row/col is valid
+function isValidMove(matrix, cellRow, cellCol) {
+  for (let row = 0; row < matrix.length; row++) {
+    for (let col = 0; col < matrix[row].length; col++) {
+      if (matrix[row][col] && (
+          // outside the game bounds
+          cellCol + col < 0 ||
+          cellCol + col >= playfield[0].length ||
+          cellRow + row >= playfield.length ||
+          // collides with another piece
+          playfield[cellRow + row][cellCol + col])
+        ) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+// place the tetromino on the playfield
+function placeTetromino() {
+  for (let row = 0; row < tetromino.matrix.length; row++) {
+    for (let col = 0; col < tetromino.matrix[row].length; col++) {
+      if (tetromino.matrix[row][col]) {
+
+        // game over if piece has any part offscreen
+        if (tetromino.row + row < 0) {
+          return showGameOver();
+        }
+
+        playfield[tetromino.row + row][tetromino.col + col] = tetromino.name;
+      }
+    }
+  }
+  tetromino = getNextTetromino();
+}
+
+// show the game over screen
+function showGameOver() {
+  cancelAnimationFrame(rAF);
+  gameOver = true;
+
+  context.fillStyle = 'black';
+  context.globalAlpha = 0.75;
+  context.fillRect(0, canvas.height / 2 - 30, canvas.width, 60);
+
+  context.globalAlpha = 1;
+  context.fillStyle = 'white';
+  context.font = '36px monospace';
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText('GAME OVER!', canvas.width / 2, canvas.height / 2);
+}
+
+const canvas = document.getElementById('game');
+const context = canvas.getContext('2d');
+const grid = 32;
+const tetrominoSequence = [];
+
+// keep track of what is in every cell of the game using a 2d array
+// tetris playfield is 10x20, with a few rows offscreen
+const playfield = [];
+
+// populate the empty state
+for (let row = -2; row < 20; row++) {
+  playfield[row] = [];
+
+  for (let col = 0; col < 10; col++) {
+    playfield[row][col] = 0;
+  }
+}
+
+// shape of the falling block
+
+const tetrominos = {
+  'I': [
+    [1, 1]
+  ]};
+
+// dictionary
+const words = {
+  'blue' : 'blå',
+  'red' : 'rød',
+  'yellow' : 'gul'
+}
+
+// color of each tetromino
+const colors = {
+  'I': 'black',
+};
+
+let count = 0;
+let tetromino = getNextTetromino();
+let rAF = null;  // keep track of the animation frame so we can cancel it
+let gameOver = false;
+
+// game loop
+function loop() {
+  rAF = requestAnimationFrame(loop);
+  context.clearRect(0,0,canvas.width,canvas.height);
+
+  // draw the playfield
+  for (let row = 0; row < 20; row++) {
+    for (let col = 0; col < 10; col++) {
+      if (playfield[row][col]) {
+        const name = playfield[row][col];
+        context.fillStyle = colors[name];
+
+        // drawing 
+        context.fillRect(col * grid, row * grid-1, grid, grid-1);
+      }
+    }
+  }
+
+  // draw the active tetromino
+  if (tetromino) {
+
+    // tetromino falls every 35 frames
+    if (++count > 35) {
+      tetromino.row++;
+      count = 0;
+
+      // place piece if it runs into anything
+      if (!isValidMove(tetromino.matrix, tetromino.row, tetromino.col)) {
+        tetromino.row--;
+        placeTetromino();
+      }
+    }
+
+    context.fillStyle = colors[tetromino.name];
+
+    for (let row = 0; row < tetromino.matrix.length; row++) {
+      for (let col = 0; col < tetromino.matrix[row].length; col++) {
+        if (tetromino.matrix[row][col]) {
+
+          // drawing
+          context.fillRect((tetromino.col + col) * grid, (tetromino.row + row) * grid, grid, grid-1);
+        }
+      }
+    }
+  }
+}
+
+// listen to keyboard events to move the active tetromino
+document.addEventListener('keydown', function(e) {
+  if (gameOver) return;
+
+
+  // down arrow key (drop)
+  if(e.which === 32) {
+
+
+  }
+
+  if(e.which === 40) {
+    const row = tetromino.row + 1;
+
+    if (!isValidMove(tetromino.matrix, row, tetromino.col)) {
+      tetromino.row = row - 1;
+
+      placeTetromino();
+      return;
+    }
+
+    tetromino.row = row;
+  }
+});
+
+
+// start the game
+rAF = requestAnimationFrame(loop);
+
+
+
+</script>
+<p class="game_input">Translation:</p>
+<input class="game_input"></input>
+</div>
+</body>
+</html>
