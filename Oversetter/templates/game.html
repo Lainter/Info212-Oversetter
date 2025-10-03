@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Fuolingo - Translation Tetris</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/static/Stylesheet.css">
+  <style>
+    .game_container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+
+    .game_content {
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+    }
+
+    .game_controls {
+      margin: 20px 0;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .control_button {
+      background: #4299e1;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .control_button:hover {
+      background: #3182ce;
+    }
+
+    .game_area {
+      display: flex;
+      gap: 30px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    canvas {
+      border: 2px solid white;
+      background: #1a202c;
+      display: block;
+    }
+
+    .translation_section {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      color: #333;
+      min-width: 300px;
+    }
+
+    .translation_input {
+      padding: 10px;
+      font-size: 16px;
+      width: 200px;
+      margin: 10px 0;
+      border: 2px solid #e2e8f0;
+      border-radius: 5px;
+    }
+
+    .score_display {
+      font-size: 20px;
+      font-weight: bold;
+      margin: 10px 0;
+      color: white;
+    }
+
+    .result_message {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-weight: bold;
+    }
+
+    .correct {
+      background: #c6f6d5;
+      color: #22543d;
+    }
+
+    .incorrect {
+      background: #fed7d7;
+      color: #742a2a;
+    }
+  </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar_box">
+            <a href="/" id="navbar_logo">Fuo</a>
+            <div class="navbar_toggle" id="mobile_menu">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+            <ul class="navbar_menu">    
+                <li class="navbar_item">
+                    <a href="/" class="navbar_links">Home</a>
+                </li>
+                <li class="navbar_item">
+                    <a href="/categories/" class="navbar_links">Categories</a>
+                </li>
+                <li class="navbar_item">
+                    <a href="/menu/" class="navbar_links">Menu</a>
+                </li>
+                <li class="navbar_item">
+                    <a href="/sign-in/" class="button">Sign In!</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="game_container">
+        <div class="game_content">
+            <h1>Translation Tetris</h1>
+            <p>Translate the words before they stack up!</p>
+        </div>
+
+        <div class="score_display">Score: <span id="score">0</span></div>
+
+        <div class="game_controls">
+            <button class="control_button" onclick="startGame()">Start Game</button>
+            <button class="control_button" onclick="pauseGame()">Pause</button>
+            <button class="control_button" onclick="setLanguage('en_to_no')">English → Norwegian</button>
+            <button class="control_button" onclick="setLanguage('no_to_en')">Norwegian → English</button>
+        </div>
+
+        <div class="game_area">
+            <canvas width="320" height="640" id="game"></canvas>
+            
+            <div class="translation_section">
+                <h3>Current Word:</h3>
+                <div id="current-word" style="font-size: 24px; margin: 10px 0; font-weight: bold;">-</div>
+                
+                <input type="text" id="translation-input" class="translation_input" placeholder="Enter translation">
+                <br>
+                <button class="control_button" onclick="checkTranslation()" style="background: #48bb78;">Submit Translation</button>
+                
+                <div id="result-message" class="result_message"></div>
+                
+                <div style="margin-top: 20px;">
+                    <p><strong>Controls:</strong></p>
+                    <p>← → : Move left/right</p>
+                    <p>Space : Submit translation quickly</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let score = 0;
+        let gameActive = false;
+        let currentFallingWord = null;
+        let correctTranslation = '';
+        let englishToNorwegian = true;
+
+        // Tetris game variables
+        const canvas = document.getElementById('game');
+        const context = canvas.getContext('2d');
+        const grid = 32;
+        
+        // Playfield - 10x20 grid
+        const playfield = [];
+        for (let row = 0; row < 20; row++) {
+            playfield[row] = [];
+            for (let col = 0; col < 10; col++) {
+                playfield[row][col] = 0;
+            }
+        }
+
+        // Word database
+        const wordDatabase = {
+            'blue': 'blå',
+            'red': 'rød', 
+            'yellow': 'gul',
+            'green': 'grønn',
+            'black': 'svart',
+            'white': 'hvit',
+            'house': 'hus',
+            'car': 'bil',
+            'dog': 'hund',
+            'cat': 'katt',
+            'book': 'bok',
+            'water': 'vann',
+            'food': 'mat',
+            'hello': 'hei',
+            'thank you': 'takk',
+            'goodbye': 'ha det'
+        };
+
+        // Get a random word
+        function getRandomWord() {
+            const words = Object.keys(wordDatabase);
+            const randomWord = words[Math.floor(Math.random() * words.length)];
+            
+            if (englishToNorwegian) {
+                return {
+                    word: randomWord,
+                    translation: wordDatabase[randomWord],
+                    display: randomWord
+                };
+            } else {
+                // Find English word for Norwegian translation
+                for (let [eng, nor] of Object.entries(wordDatabase)) {
+                    if (nor === randomWord) {
+                        return {
+                            word: nor,
+                            translation: eng,
+                            display: nor
+                        };
+                    }
+                }
+                return {
+                    word: randomWord,
+                    translation: 'translation',
+                    display: randomWord
+                };
+            }
+        }
+
+        // Create a falling block with a word
+        function createWordBlock(word) {
+            return {
+                name: word.word,
+                matrix: [[1]], // Simple 1x1 block for now
+                row: 0,
+                col: Math.floor(Math.random() * 10),
+                word: word.word,
+                translation: word.translation,
+                displayText: word.display
+            };
+        }
+
+        // Get next word block
+        function getNextWordBlock() {
+            const wordData = getRandomWord();
+            return createWordBlock(wordData);
+        }
+
+        // Check if movement is valid
+        function isValidMove(matrix, cellRow, cellCol) {
+            for (let row = 0; row < matrix.length; row++) {
+                for (let col = 0; col < matrix[row].length; col++) {
+                    if (matrix[row][col]) {
+                        if (cellCol + col < 0 || 
+                            cellCol + col >= 10 || 
+                            cellRow + row >= 20 || 
+                            playfield[cellRow + row][cellCol + col]) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+
+        // Place the block
+        function placeTetromino() {
+            if (!currentFallingWord) return;
+            
+            for (let row = 0; row < currentFallingWord.matrix.length; row++) {
+                for (let col = 0; col < currentFallingWord.matrix[row].length; col++) {
+                    if (currentFallingWord.matrix[row][col]) {
+                        playfield[currentFallingWord.row + row][currentFallingWord.col + col] = currentFallingWord.name;
+                    }
+                }
+            }
+            
+            // Word reached bottom
+            if (gameActive) {
+                score = Math.max(0, score - 5);
+                updateScore();
+                showMessage(`Missed: ${currentFallingWord.displayText} = ${currentFallingWord.translation}`, 'incorrect');
+            }
+            
+            currentFallingWord = getNextWordBlock();
+            updateCurrentWordDisplay();
+        }
+
+        // Update score
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+        }
+
+        // Show message
+        function showMessage(message, type) {
+            const resultElement = document.getElementById('result-message');
+            resultElement.textContent = message;
+            resultElement.className = 'result_message ' + type;
+        }
+
+        // Set language
+        function setLanguage(language) {
+            englishToNorwegian = (language === 'en_to_no');
+            if (gameActive && currentFallingWord) {
+                const wordData = getRandomWord();
+                currentFallingWord = createWordBlock(wordData);
+                updateCurrentWordDisplay();
+            }
+        }
+
+        // Update current word display
+        function updateCurrentWordDisplay() {
+            if (currentFallingWord) {
+                document.getElementById('current-word').textContent = currentFallingWord.displayText;
+                correctTranslation = currentFallingWord.translation;
+            }
+        }
+
+        // Check translation
+        function checkTranslation() {
+            if (!gameActive || !currentFallingWord) {
+                showMessage('Start the game first!', 'incorrect');
+                return;
+            }
+            
+            const userInput = document.getElementById('translation-input').value.trim().toLowerCase();
+            const correctAnswer = correctTranslation.toLowerCase();
+            
+            if (userInput === correctAnswer) {
+                score += 10;
+                updateScore();
+                showMessage('Correct! +10 points', 'correct');
+                
+                // Remove the block and get new one
+                currentFallingWord = getNextWordBlock();
+                updateCurrentWordDisplay();
+                
+                document.getElementById('translation-input').value = '';
+                document.getElementById('translation-input').focus();
+            } else {
+                showMessage(`Wrong! The correct translation is: ${correctTranslation}`, 'incorrect');
+                score = Math.max(0, score - 2);
+                updateScore();
+            }
+        }
+
+        // Game loop variables
+        let count = 0;
+        let rAF = null;
+
+        // Main game loop
+        function loop() {
+            if (!gameActive) {
+                rAF = requestAnimationFrame(loop);
+                return;
+            }
+            
+            context.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw playfield
+            for (let row = 0; row < 20; row++) {
+                for (let col = 0; col < 10; col++) {
+                    if (playfield[row][col]) {
+                        context.fillStyle = '#4299e1';
+                        context.fillRect(col * grid, row * grid, grid-1, grid-1);
+                    }
+                }
+            }
+
+            // Draw falling block
+            if (currentFallingWord && gameActive) {
+                context.fillStyle = '#e53e3e';
+                
+                for (let row = 0; row < currentFallingWord.matrix.length; row++) {
+                    for (let col = 0; col < currentFallingWord.matrix[row].length; col++) {
+                        if (currentFallingWord.matrix[row][col]) {
+                            context.fillRect(
+                                (currentFallingWord.col + col) * grid, 
+                                (currentFallingWord.row + row) * grid, 
+                                grid-1, 
+                                grid-1
+                            );
+                            
+                            // Draw word text
+                            context.fillStyle = 'white';
+                            context.font = '12px Arial';
+                            context.textAlign = 'center';
+                            context.textBaseline = 'middle';
+                            context.fillText(
+                                currentFallingWord.displayText,
+                                (currentFallingWord.col + col) * grid + grid/2,
+                                (currentFallingWord.row + row) * grid + grid/2
+                            );
+                            context.fillStyle = '#e53e3e';
+                        }
+                    }
+                }
+
+                // Move block down
+                if (++count > 20) {
+                    const newRow = currentFallingWord.row + 1;
+                    
+                    if (!isValidMove(currentFallingWord.matrix, newRow, currentFallingWord.col)) {
+                        placeTetromino();
+                    } else {
+                        currentFallingWord.row = newRow;
+                    }
+                    count = 0;
+                }
+            }
+            
+            rAF = requestAnimationFrame(loop);
+        }
+
+        // Game control functions
+        function startGame() {
+            if (!gameActive) {
+                gameActive = true;
+                score = 0;
+                updateScore();
+                
+                // Reset playfield
+                for (let row = 0; row < 20; row++) {
+                    for (let col = 0; col < 10; col++) {
+                        playfield[row][col] = 0;
+                    }
+                }
+                
+                currentFallingWord = getNextWordBlock();
+                updateCurrentWordDisplay();
+                document.getElementById('translation-input').focus();
+                
+                showMessage('Game started! Translate the words!', 'correct');
+            }
+        }
+
+        function pauseGame() {
+            gameActive = !gameActive;
+            showMessage(gameActive ? 'Game resumed!' : 'Game paused', 'correct');
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', function(e) {
+            if (!gameActive || !currentFallingWord) return;
+            
+            // Space bar to submit
+            if (e.keyCode === 32) {
+                e.preventDefault();
+                checkTranslation();
+            }
+            
+            // Enter key to submit
+            if (e.keyCode === 13) {
+                checkTranslation();
+            }
+            
+            // Arrow keys to move
+            if (e.keyCode === 37) { // Left
+                const newCol = currentFallingWord.col - 1;
+                if (isValidMove(currentFallingWord.matrix, currentFallingWord.row, newCol)) {
+                    currentFallingWord.col = newCol;
+                }
+            }
+            if (e.keyCode === 39) { // Right
+                const newCol = currentFallingWord.col + 1;
+                if (isValidMove(currentFallingWord.matrix, currentFallingWord.row, newCol)) {
+                    currentFallingWord.col = newCol;
+                }
+            }
+        });
+
+        // Initialize
+        updateCurrentWordDisplay();
+        rAF = requestAnimationFrame(loop);
+    </script>
+</body>
+</html>
