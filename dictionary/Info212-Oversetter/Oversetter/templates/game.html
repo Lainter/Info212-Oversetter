@@ -11,7 +11,7 @@
       flex-direction: column;
       align-items: center;
       padding: 20px;
-      background: linear-gradient(135deg, #667eea 0%, #c61212ff 100%);
+      background: linear-gradient(135deg, #090707ff 0%, #12c524ff 100%);
       min-height: 50vh;
     }
 
@@ -200,7 +200,7 @@
             'food': 'mat',
             'hello': 'hei',
             'thank you': 'takk',
-            'goodbye': 'ha det'
+            'goodbye': 'hade'
         };
 
         // Get a random word
@@ -314,7 +314,6 @@
             }
         }
 
-        // Update current word display
         function updateCurrentWordDisplay() {
             if (currentFallingWord) {
                 document.getElementById('current-word').textContent = currentFallingWord.displayText;
@@ -322,7 +321,6 @@
             }
         }
 
-        // Check translation
         function checkTranslation() {
             if (!gameActive || !currentFallingWord) {
                 showMessage('Start the game first!', 'incorrect');
@@ -367,7 +365,7 @@
             for (let row = 0; row < 10; row++) {
                 for (let col = 0; col < 10; col++) {
                     if (playfield[row][col]) {
-                        context.fillStyle = '#4299e1';
+                        context.fillStyle = '#f2f6faff';
                         context.fillRect(col * grid, row * grid, grid-1, grid-1);
                     }
                 }
@@ -375,7 +373,7 @@
 
             // Draw falling block
             if (currentFallingWord && gameActive) {
-                context.fillStyle = '#e53e3e';
+                context.fillStyle = '#020202ff';
                 
                 for (let row = 0; row < currentFallingWord.matrix.length; row++) {
                     for (let col = 0; col < currentFallingWord.matrix[row].length; col++) {
@@ -403,7 +401,7 @@
                 }
 
                 // Move block down
-                if (++count > 50) {
+                if (++count > (50 - Math.round(score/50))) {
                     const newRow = currentFallingWord.row + 1;
                     
                     if (!isValidMove(currentFallingWord.matrix, newRow, currentFallingWord.col)) {
