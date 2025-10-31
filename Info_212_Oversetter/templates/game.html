@@ -7,15 +7,16 @@
   <link rel="stylesheet" href="/static/Stylesheet.css">
   <style>
     /* ... your existing CSS styles ... */
-    .game_container { display: flex; flex-direction: column; align-items: center; padding: 20px; background: linear-gradient(135deg, #090707ff 0%, #12c524ff 100%); min-height: 50vh; }
+    body { background-color: darkslateblue; margin: 0; padding: 0; }
+    .game_container { display: flex; flex-direction: column; align-items: center; padding: 10px;}
     .game_content { text-align: center; color: white; margin-bottom: 30px; }
     .game_controls { margin: 20px 0; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-    .control_button { background: #4299e1; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
-    .control_button:hover { background: #3182ce; }
+    .control_button { background: #7370d7; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+    .control_button:hover { background: #4781b8; }
     .game_area { display: flex; gap: 30px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
     canvas { border: 2px solid white; background: #1a202c; }
-    .translation_section { background: white; padding: 20px; border-radius: 10px; color: #333; min-width: 300px; }
-    .translation_input { padding: 10px; font-size: 16px; width: 200px; margin: 10px 0; border: 2px solid #e2e8f0; border-radius: 5px; }
+    .translation_section { background: rgb(186, 173, 230); padding: 20px; border-radius: 10px; color: #333; min-width: 300px; }
+    .translation_input { padding: 10px; font-size: 16px; width: 200px; margin: 10px 0; border: 2px solid rgb(186, 173, 230); border-radius: 5px; }
     .score_display { font-size: 20px; font-weight: bold; margin: 10px 0; color: white; }
     .result_message { padding: 10px; margin: 10px 0; border-radius: 5px; font-weight: bold; }
     .correct { background: #c6f6d5; color: #22543d; }
@@ -25,13 +26,22 @@
 <body>
     <nav class="navbar">
         <div class="navbar_box">
-            <a href="/" id="navbar_logo">Fuo</a>
-            <div class="navbar_toggle" id="mobile_menu"><span class="bar"></span><span class="bar"></span><span class="bar"></span></div>
-            <ul class="navbar_menu">
-                <li class="navbar_item"><a href="/" class="navbar_links">Home</a></li>
-                <li class="navbar_item"><a href="/categories/" class="navbar_links">Categories</a></li>
-                <li class="navbar_item"><a href="/menu/" class="navbar_links">Menu</a></li>
-                <li class="navbar_item"><a href="/sign-in/" class="button">Sign In!</a></li>
+            <a href="{% url 'home' %}" id="navbar_logo">Fuo</a>
+            <div class="navbar_toggle" id="mobile_menu">
+            </div>
+            <ul class="navbar_menu">    
+                <li class="navbar_item">
+                    <a href="{% url 'home' %}" class="navbar_links">Home</a>
+                </li>
+                <li class="navbar_item">
+                    <a href="{% url 'categories' %}" class="navbar_links">Categories</a>
+                </li>
+                <li class="navbar_item">
+                    <a href="{% url 'menu' %}" class="navbar_links">Menu</a>
+                </li>
+                <li class="navbar_item">
+                    <a href="{% url 'sign_in' %}" class="button">Sign In!</a>
+                </li>
             </ul>
         </div>
     </nav>
@@ -72,7 +82,7 @@
         </div>
     </div>
 
-    <script>
+<script>
         // Game state
         let score = 0;
         let gameActive = false;
