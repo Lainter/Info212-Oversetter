@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'Translation_Game',
     'django_extensions',
+    'users',
 ]
 
 MIDDLEWARE = [
