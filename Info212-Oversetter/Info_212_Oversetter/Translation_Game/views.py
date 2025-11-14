@@ -25,7 +25,12 @@ def get_random_translation(request):
         return JsonResponse({'error': 'No translations found'}, status=404)
 
     random_translation = random.choice(list(translations))
-
+    count = random_translation.source_word.word.count(',')
+    if count > 0:
+        n = random.randint(0, count)
+        b = [item.strip() for item in random_translation.source_word.word.split(',')]
+        random_translation.source_word.word = b[n]
+        
     return JsonResponse({
         'source_word': random_translation.source_word.word,
         'target_word': random_translation.target_word.word,

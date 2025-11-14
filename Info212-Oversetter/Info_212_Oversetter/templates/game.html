@@ -77,7 +77,7 @@
                 <div style="margin-top: 20px;">
                     <p><strong>Controls:</strong></p>
                     <p>← → : Move left/right</p>
-                    <p>Space / Enter : Submit translation quickly</p>
+                    <p>Enter : Submit translation quickly</p>
                 </div>
             </div>
         </div>
@@ -153,6 +153,8 @@
         // Game control functions
         async function startGame() {
             if (!gameActive) {
+                const pauseButton = document.querySelector('.pause_button');
+                pauseButton.textContent = "Pause";
                 isGameOver = false;
                 gameActive = true;
                 score = 0;
@@ -197,11 +199,16 @@
             }
         }
 
-        async function checkTranslation() {
+        async function checkTranslation(booly) {
             if(!gameActive || !currentFallingWord) { showMessage('Start the game first!', 'incorrect'); return; }
             const userInput = document.getElementById('translation-input').value.trim().toLowerCase();
-            const correctAnswer = correctTranslation.toLowerCase();
-            if(userInput === correctAnswer) {
+            let correctAnswer = correctTranslation.toLowerCase();
+            let burt = true;
+            if (correctAnswer.includes(",")) { 
+            correctAnswer = correctAnswer.split(",").map(answer => answer.trim());
+            burt = false; 
+            }
+            if(userInput === correctAnswer || (correctAnswer.includes(userInput)) && burt === false) {
                 score += 10;
                 updateScore();
                 showMessage('Correct! +10 points', 'correct');
@@ -209,20 +216,26 @@
                 updateCurrentWordDisplay();
                 document.getElementById('translation-input').value='';
                 document.getElementById('translation-input').focus();
-            } else {
+            } else if(booly === true) {
                 showMessage(`Wrong! The correct translation is: ${correctTranslation}`, 'incorrect');
                 score = Math.max(0, score-2);
                 updateScore();
             }
+            else{
+                return;
+            }
         }
 
-        // Keyboard controls
         document.addEventListener('keydown', function(e){
             if(!gameActive || !currentFallingWord) return;
-            if([13,32].includes(e.keyCode)) { e.preventDefault(); checkTranslation(); }
+            if([13].includes(e.keyCode)) { e.preventDefault(); checkTranslation(true); }
             if(e.keyCode===37 && isValidMove(currentFallingWord.matrix, currentFallingWord.row, currentFallingWord.col-1)) currentFallingWord.col--;
             if(e.keyCode===39 && isValidMove(currentFallingWord.matrix, currentFallingWord.row, currentFallingWord.col+1)) currentFallingWord.col++;
         });
+        document.getElementById('translation-input').addEventListener('input', function(e) {
+            if(!gameActive || !currentFallingWord) return;
+            checkTranslation(false); 
+            });
 
         // Game loop
         let count=0, rAF=null;
@@ -258,7 +271,7 @@
                         context.fillStyle='#e53e3e';
                     }
                 /* if(++count>(50-Math.round(score/50)))*/
-                if(++count > 50){
+                if(++count > 100){
                     const newRow=currentFallingWord.row+1;
                     if(!isValidMove(currentFallingWord.matrix,newRow,currentFallingWord.col)) placeTetromino();
                     else currentFallingWord.row=newRow;
