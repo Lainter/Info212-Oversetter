@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fuolingo</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/static/Stylesheet.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar_box">
+            <a href="{% url 'home' %}" id="navbar_logo">Fuo</a>
+            <div class="navbar_toggle" id="mobile_menu">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+            <ul class="navbar_menu">    
+                <li class="navbar_item">
+                    <a href="{% url 'home' %}" class="navbar_links">Home</a>
+                </li>
+                <li class="navbar_item">
+                    <a href="{% url 'categories' %}" class="navbar_links">Categories</a>
+                </li>
+                <li class="navbar_item">
+                    <a href="{% url 'menu' %}" class="navbar_links">Menu</a>
+                </li>
+                <li class="navbar_item">
+                    <a href="{% url 'sign_in' %}" class="button">Sign In!</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="game_start">
+        <div class="game_container">
+            <div class="game_content">
+                <h1>Welcome to Fuolingo!</h1>
+                <p>Learn languages through fun games and challenges</p>
+                
+                <div class="feature_cards">
+                    <div class="feature_card">
+                        <h3>Translation Tetris</h3>
+                        <p>Translate words before they stack up!</p>
+                        <a class="game_button" href="{% url 'game' %}">PLAY TETRIS</a>
+                    </div>
+                </div>
+
+                <div class="stats_section">
+                    <div class="stat_item">
+                        <h4>Words Learned</h4>
+                        <p id="words-learned">0</p>
+                    </div>
+                    <div class="stat_item">
+                        <h4>Current Streak</h4>
+                        <p id="current-streak">0 days</p>
+                    </div>
+                    <div class="stat_item">
+                        <h4>Total Points</h4>
+                        <p id="total-points">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple stats - you can replace this with data from your Django backend
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load user stats from localStorage or set defaults
+            const wordsLearned = localStorage.getItem('wordsLearned') || 0;
+            const currentStreak = localStorage.getItem('currentStreak') || 0;
+            const totalPoints = localStorage.getItem('totalPoints') || 0;
+            
+            document.getElementById('words-learned').textContent = wordsLearned;
+            document.getElementById('current-streak').textContent = currentStreak + ' days';
+            document.getElementById('total-points').textContent = totalPoints;
+            
+            // Mobile menu functionality (if needed)
+            const mobileMenu = document.getElementById('mobile_menu');
+            const navbarMenu = document.querySelector('.navbar_menu');
+            
+            if (mobileMenu) {
+                mobileMenu.addEventListener('click', function() {
+                    navbarMenu.classList.toggle('active');
+                });
+            }
+        });
+        
+        // Function to update stats (call this from other pages when user completes activities)
+        function updateStats(words = 0, points = 0) {
+            let wordsLearned = parseInt(localStorage.getItem('wordsLearned') || 0) + words;
+            let totalPoints = parseInt(localStorage.getItem('totalPoints') || 0) + points;
+            
+            localStorage.setItem('wordsLearned', wordsLearned);
+            localStorage.setItem('totalPoints', totalPoints);
+            
+            // Update streak (simplified - you might want more complex logic)
+            const today = new Date().toDateString();
+            const lastVisit = localStorage.getItem('lastVisit');
+            
+            if (lastVisit !== today) {
+                let currentStreak = parseInt(localStorage.getItem('currentStreak') || 0);
+                if (lastVisit && new Date(today) - new Date(lastVisit) === 86400000) {
+                    currentStreak++;
+                } else {
+                    currentStreak = 1;
+                }
+                localStorage.setItem('currentStreak', currentStreak);
+                localStorage.setItem('lastVisit', today);
+            }
+        }
+    </script>
+</body>
+</html>
