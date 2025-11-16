@@ -10,7 +10,8 @@ class Language(models.Model):
 
 class Tag(models.Model):
     name = models.CharField(max_length=100, unique=True)
-
+    def __str__(self):
+        return self.name
 class Word(models.Model):
     word = models.CharField(max_length=255)
     language = models.ForeignKey(Language, on_delete=models.CASCADE)
@@ -23,3 +24,5 @@ class Translation(models.Model):
     source_word = models.ForeignKey(Word, on_delete=models.CASCADE, related_name="translations_from")
     target_word = models.ForeignKey(Word, on_delete=models.CASCADE, related_name="translations_to")
 
+    def __str__(self):
+        return f"{self.source_word} → {self.target_word}"

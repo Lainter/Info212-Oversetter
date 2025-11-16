@@ -25,8 +25,16 @@
                 <li class="navbar_item">
                     <a href="{% url 'menu' %}" class="navbar_links">Menu</a>
                 </li>
+                </li>
                 <li class="navbar_item">
-                    <a href="{% url 'sign_in' %}" class="button">Sign In!</a>
+                    {% if user.is_authenticated %}
+                        <p>Logged in as {{ user.username }} | <form method="post" action="{% url 'logout' %}" style="display:inline;">
+                                                                {% csrf_token %}
+                                                                <button type="submit" class ='button'>Logout!</button>
+                                                                </form></p>
+                    {% else %}
+                        <a href="{% url 'login' %}" class="button">Sign In!</a>
+                    {% endif %}
                 </li>
             </ul>
         </div>
