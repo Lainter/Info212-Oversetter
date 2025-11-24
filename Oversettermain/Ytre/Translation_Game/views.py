@@ -8,14 +8,12 @@ def get_random_translation(request):
     source_lang = request.GET.get('source', 'en')
     target_lang = request.GET.get('target', 'no')
 
-    # Find source and target language objects
     try:
         src_lang = Language.objects.get(code=source_lang)
         tgt_lang = Language.objects.get(code=target_lang)
     except Language.DoesNotExist:
         return JsonResponse({'error': 'Invalid language code'}, status=400)
 
-    # Pick a random word in the source language that has a translation
     translations = Translation.objects.filter(
         source_word__language=src_lang,
         target_word__language=tgt_lang
@@ -25,14 +23,16 @@ def get_random_translation(request):
         return JsonResponse({'error': 'No translations found'}, status=404)
 
     random_translation = random.choice(list(translations))
-    count = random_translation.source_word.word.count(',')
+    
+    source_word_text = random_translation.source_word.word
+    count = source_word_text.count(',')
     if count > 0:
         n = random.randint(0, count)
-        b = [item.strip() for item in random_translation.source_word.word.split(',')]
-        random_translation.source_word.word = b[n]
+        b = [item.strip() for item in source_word_text.split(',')]
+        source_word_text = b[n]
         
     return JsonResponse({
-        'source_word': random_translation.source_word.word,
+        'source_word': source_word_text,
         'target_word': random_translation.target_word.word,
         'source_language': src_lang.code,
         'target_language': tgt_lang.code,
