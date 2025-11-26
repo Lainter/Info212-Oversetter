@@ -1,0 +1,473 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Fuolingo - Translation Tetris</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{% static 'Stylesheet.css' %}">
+  <style>
+    .game_container { display: flex; flex-direction: column; align-items: center; padding: 20px; background: white; min-height: calc(100vh - 80px);  /* Change from 50vh */}
+    .game_content { text-align: center; color: rgb(0, 0, 0); margin-bottom: 30px; }
+    .game_controls { margin: 20px 0; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+    .control_button { background: linear-gradient(135deg, rgb(207, 66, 66) 0%, rgb(255, 174, 0) 100%); color: rgb(0, 0, 0); padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+    .pause_button { background: linear-gradient(135deg, rgb(207, 66, 66) 0%, rgb(255, 174, 0) 100%); color: rgb(0, 0, 0); padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+    .hint_button { background: linear-gradient(135deg, rgb(207, 66, 66) 0%, rgb(255, 174, 0) 100%); color: rgb(0, 0, 0); padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+    .control_button:hover { background: #3182ce; }
+    .game_area { display: flex; gap: 30px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+    canvas { border: 2px solid white; background: #1a202c; }
+    .translation_section { background: white; padding: 20px;    border-radius: 10px; color: #333; min-width: 300px; }
+    .translation_input { padding: 10px; font-size: 16px; width: 200px; margin: 10px 0; border: 2px solid #e2e8f0; border-radius: 5px; }
+    .score_display { font-size: 20px; font-weight: bold; margin: 10px 0; color: rgb(0, 0, 0); }
+    .result_message { padding: 10px; margin: 10px 0; border-radius: 5px; font-weight: bold; display: flex; background: #373a3eff; }
+    .correct { background: #c6f6d5; color: #22543d; }
+    .incorrect { background: #fed7d7; color: #742a2a; }
+    .black{ background: #000000ff; color: #be1a1aff; }
+    .letter {
+        display: inline;
+        font-size: 24px;
+        font-weight: bold;
+    }
+    .letter.green {
+        color: #538d4e;
+    }
+    .letter.yellow {
+        color: #b59f3b;
+    }
+    .letter.red {
+        color: #d64045;
+    }
+    .letter.gray {
+        color: #3a3a3c;
+        }
+  </style>  
+</head>
+<body class = "game">
+    <nav class="navbar">
+        <div class="navbar_box">
+            <a href="/" id="navbar_logo">Fuo</a>
+            <div class="navbar_toggle" id="mobile_menu"><span class="bar"></span><span class="bar"></span><span class="bar"></span></div>
+            <ul class="navbar_menu">
+                <li class="navbar_item"><a href="/" class="navbar_links">Home</a></li>
+                <li class="navbar_item"><a href="/categories/" class="navbar_links">Categories</a></li>
+                <li class="navbar_item"><a href="/menu/" class="navbar_links">Menu</a></li>
+                <li class="navbar_item"><a href="/sign-in/" class="button">Sign In!</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="game_container">
+        <div class="game_content">
+            <h1>Translation Tetris</h1>
+            <p>Translate the words before they stack up!</p>
+        </div>
+
+        <div class="score_display">Score: <span id="score">0</span></div>
+
+        <div class="game_controls">
+            <button class="control_button" onclick="startGame()">Start Game</button>
+            <button class="pause_button" onclick="pauseGame()">Pause</button>
+            <button class="control_button" onclick="setLanguage('en_to_no')">English → Norwegian</button>
+            <button class="control_button" onclick="setLanguage('no_to_en')">Norwegian → English</button>
+            <button class="hint_button" onclick="hintMode()">Hints: Off</button>
+        </div>
+
+        <div class="game_area">
+            <div style="position: relative; width: 320px; height: 320px; flex-shrink: 0;">
+            <canvas width="320" height="320" id="game"></canvas>
+            
+            <div id="game-over-overlay" style="display: none;">
+            <div class="overlay-content">
+                <h2>Game Over!</h2>
+                <p style="font-size: 24px; margin: 20px 0;">Final Score: <span id="final-score">0</span></p>
+                <div id="missed-words" style="max-height: 200px; overflow-y: auto; margin: 20px 0;"></div>
+                <button class="control_button" onclick="restartGame()">Play Again</button>
+            </div>
+            </div>
+            </div>
+            <div class="translation_section">
+                <h3>Current Word:</h3>
+                <div id="current-word" style="font-size: 24px; margin: 10px 0; font-weight: bold;">-</div>
+                <div id="hint-word" style="font-size: 24px; margin: 10px 0; font-weight: bold; color: #209852ff; ">-</div>
+                <input type="text" id="translation-input" class="translation_input" placeholder="Enter translation">
+                <br>
+                <button class="control_button" onclick="checkTranslation()" style="background: #48bb78;">Submit Translation</button>
+
+                <div id="result-message" class="result_message"></div>
+
+                <div style="margin-top: 20px;">
+                    <p><strong>Controls:</strong></p>
+                    <p>← → : Move left/right</p>
+                    <p>Enter : Submit translation quickly</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let score = 0;
+        let gameActive = false;
+        let currentFallingWord = null;
+        let correctTranslation = '';
+        let englishToNorwegian = true;
+        let isGameOver = false;
+        let hintOn = false;
+        let speed = 200;
+        let randomWord = "";
+
+        // Canvas setup
+        const canvas = document.getElementById('game');
+        const context = canvas.getContext('2d');
+        const grid = 32;
+        const playfield = Array.from({length:10}, ()=>Array(10).fill(0));
+
+        // Fetch a random translation from Django API
+        async function getRandomWord(tag=null) {
+            const sourceLang = englishToNorwegian ? 'en' : 'no';
+            const targetLang = englishToNorwegian ? 'no' : 'en';
+            let url = `/api/random-translation/?source=${sourceLang}&target=${targetLang}`;
+            if (tag) url += `&tag=${encodeURIComponent(tag)}`;
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("No translation found");
+                const data = await response.json();
+                return {
+                    word: data.source_word,
+                    translation: data.target_word,
+                    display: data.source_word
+                };
+            } catch (error) {
+                console.error("Error fetching translation:", error);
+                return { word: "error", translation: "feil", display: "Error" };
+            }
+        }
+
+        // Create block
+        function createWordBlock(word) {
+            yep = 10;
+            matrix = [[1]];
+            if(word.display.length > 10){
+                yep = 8;
+                matrix = [[1,1,1]];
+            }
+            else if(word.display.length > 5){
+                yep = 9;
+                matrix = [[1,1]];
+            }
+            return {
+                name: word.word,
+                matrix,
+                row: 0,
+                col: Math.floor(Math.random() * yep),
+                word: word.word,    
+                translation: word.translation,
+                displayText: word.display
+            };
+        }
+
+        async function getNextWordBlock() {
+            const wordData = await getRandomWord();
+            return createWordBlock(wordData);
+        }
+
+        function updateScore() { document.getElementById('score').textContent = score; speed = Math.floor(200 - (score/2)); if (speed < 30) speed = 30; }
+        function showMessage(message, type) {
+            const el = document.getElementById('result-message');
+            el.textContent = message; el.className = 'result_message ' + type;
+        }
+        function showColoredMessage(text, colors){
+            const container = document.getElementById('result-message');
+            container.innerHTML = ''; 
+            container.className = 'result_message ';
+    
+            for (let i = 0; i < text.length; i++) {
+                const letter = document.createElement('div');
+                letter.className = `letter ${colors[i]|| 'gray'}`;
+                letter.textContent = text[i];
+                container.appendChild(letter);
+    }       
+        }
+        function getColoredMessage(text){
+            colorArray = [];
+            let textArray = text.split("")
+            let answerArray = correctTranslation;
+            if (answerArray.includes(",")){
+                answerArray = answerArray.split(",");
+                answerArray = answerArray[0];
+                answerArray = answerArray.split("");
+            }
+            else{
+                answerArray = answerArray.split("");
+            }
+            while (textArray.length > 0){
+                if(textArray[0] == answerArray[0]){
+                    colorArray.push('green');
+                    textArray.shift()
+                    answerArray.shift()
+                }
+                else if(answerArray.includes(textArray[0])){
+                    colorArray.push('yellow');
+                    textArray.shift()
+                    answerArray.shift()
+                }
+                else{
+                    colorArray.push('red');
+                    textArray.shift();
+                    answerArray.shift();
+                }
+            }
+            return colorArray;
+        }
+        function updateCurrentWordDisplay() {
+            if(currentFallingWord) {
+                document.getElementById('current-word').textContent = currentFallingWord.displayText;
+                correctTranslation = currentFallingWord.translation;
+            }
+        }
+
+        // Game control functions
+        async function startGame() {
+            if (!gameActive) {
+                if(!hintOn) document.getElementById('hint-word').textContent = "";
+                const pauseButton = document.querySelector('.pause_button');
+                pauseButton.textContent = "Pause";
+                isGameOver = false;
+                gameActive = true;
+                score = 0;
+                updateScore();
+                for (let row=0; row<10; row++) for(let col=0; col<10; col++) playfield[row][col]=0;
+                currentFallingWord = await getNextWordBlock();
+                updateCurrentWordDisplay();
+                showMessage('Game started! Translate the words!', 'correct');
+                document.getElementById('translation-input').focus();
+            }
+        }
+        function hintMode(){
+            const hintButton = document.querySelector('.hint_button');
+            if(isGameOver){showMessage("Restart the game before you turn off/on hints");; return}
+            else if (hintOn == true){
+                hintButton.textContent = 'Hints: Off';
+                hintOn = false;
+                document.getElementById('hint-word').textContent = "-";
+            }
+            else{
+                hintButton.textContent = 'Hints: On';
+                hintOn = true;
+            }
+            showMessage(hintOn ? 'Hints on!' : 'Hints off', 'correct');
+        }
+
+        function pauseGame() {
+            const pauseButton = document.querySelector('.pause_button');
+            if(isGameOver){showMessage("Can't pause/unpause a lost game");; return}
+            else if (gameActive == true){
+                pauseButton.textContent = 'Unpause';
+                gameActive = !gameActive;
+            }
+            else{
+                pauseButton.textContent = 'Pause';
+                gameActive = !gameActive;
+            }
+            showMessage(gameActive ? 'Game resumed!' : 'Game paused', 'correct');
+        }
+        function restartGame() {
+            isGameOver = false;
+            document.getElementById('game-over-overlay').style.display = 'none';
+            startGame();
+        }
+        function gameOver(){
+            isGameOver = true;
+            gameActive = false;
+            document.getElementById('final-score').textContent = score;
+            document.getElementById('game-over-overlay').style.display = 'flex';
+        }
+
+        function setLanguage(language) {
+            englishToNorwegian = (language==='en_to_no');
+            if(gameActive) {
+                getNextWordBlock().then(block => { currentFallingWord = block; updateCurrentWordDisplay(); });
+            }
+        }
+        function placeHintWord(){
+            if(currentFallingWord.row == 1) setRandomWord();
+            partial_translation = "_".repeat(randomWord.length);
+            if (currentFallingWord.row < 2){document.getElementById('hint-word').textContent = partial_translation; return;}
+            else{
+                if(randomWord.length > 9){
+                    let arr = partial_translation.split("");
+                    for(let i = 2; i < currentFallingWord.row+1; i++){
+                        arr[i-2] = randomWord[i-2];
+                    }
+                partial_translation = arr.join("");
+                document.getElementById('hint-word').textContent = partial_translation;
+                return;
+                }
+                else if(randomWord.length > 3){
+                    let arr = partial_translation.split("");
+                    for(let i = 0, j = 0; i < currentFallingWord.row; i += 2, j++){
+                        if(i == 0){
+                            continue;
+                        }
+                        arr[j-1] = randomWord[j-1];
+                    }
+                partial_translation = arr.join("");
+                document.getElementById('hint-word').textContent = partial_translation;
+                return;
+                }
+                else{
+                    let arr = partial_translation.split("");
+                    for(let i = 0, j = 0; i < currentFallingWord.row; i += 3, j++){
+                        if(i == 0){
+                            continue;
+                        }
+                        arr[j-1] = randomWord[j-1];
+                    }
+                partial_translation = arr.join("");
+                document.getElementById('hint-word').textContent = partial_translation;
+                return;
+                }
+            }
+        }
+        function setRandomWord(){
+            translationz = currentFallingWord.translation.split(',');    ;
+            randomWord = translationz[Math.floor(Math.random() * translationz.length)];
+        }
+
+        async function checkTranslation(booly) {
+            if(!gameActive || !currentFallingWord) { showMessage('Start the game first!', 'incorrect'); return; }
+            const userInput = document.getElementById('translation-input').value.trim().toLowerCase();
+            let correctAnswer = correctTranslation.toLowerCase();
+            let burt = true;
+            if (correctAnswer.includes(",")) { 
+            correctAnswer = correctAnswer.split(",").map(answer => answer.trim());
+            burt = false; 
+            }
+            if(userInput === correctAnswer || (userInput != "" && correctAnswer.includes(userInput)) && burt === false) {
+                score += 10;
+                updateScore();
+                showMessage('Correct! +10 points', 'correct');  
+                document.getElementById('hint-word').textContent = "-";    
+                count = 0;
+
+                const newWord = await getNextWordBlock();
+                currentFallingWord = newWord;
+                updateCurrentWordDisplay();
+                document.getElementById('translation-input').value='';
+                document.getElementById('translation-input').focus();
+            } else if(booly === true && hintOn === true) {
+                showMessage(`Wrong! The correct translation is: ${correctTranslation}`, 'incorrect');
+                score = Math.max(0, score-2);
+                updateScore();
+            }
+            else if(booly === true){
+                const colorArray = getColoredMessage(userInput)
+                showColoredMessage(userInput, colorArray);
+            }
+            else{
+                return;
+            }
+        }
+
+        document.addEventListener('keydown', function(e){
+            if(!gameActive || !currentFallingWord) return;
+            if([13].includes(e.keyCode)) { e.preventDefault(); checkTranslation(true); }
+            if(e.keyCode===37 && isValidMove(currentFallingWord.matrix, currentFallingWord.row, currentFallingWord.col-1)) currentFallingWord.col--;
+            if(e.keyCode===39 && isValidMove(currentFallingWord.matrix, currentFallingWord.row, currentFallingWord.col+1)) currentFallingWord.col++;
+        });
+        document.getElementById('translation-input').addEventListener('input', function(e) {
+            if(!gameActive || !currentFallingWord) return;
+            checkTranslation(false); 
+            });
+
+        // Game loop
+        let count=0, rAF=null;
+        function isValidMove(matrix, row, col) {
+            for(let r=0;r<matrix.length;r++) for(let c=0;c<matrix[r].length;c++)
+                if(matrix[r][c] && (col+c<0 || col+c>=10 || row+r>=10 || playfield[row+r][col+c])) return false;
+            return true;
+        }
+        async function placeTetromino() {
+            if(!currentFallingWord) return;
+            for(let r=0;r<currentFallingWord.matrix.length;r++) for(let c=0;c<currentFallingWord.matrix[r].length;c++)
+                if(currentFallingWord.matrix[r][c]) playfield[currentFallingWord.row+r][currentFallingWord.col+c]=currentFallingWord.name;
+            if(gameActive){showMessage(`Missed: ${currentFallingWord.displayText} = ${currentFallingWord.translation}`,'incorrect'); }
+            count = 0;
+            nextword = await getNextWordBlock();      
+            for(let r=0; r<nextword.matrix.length; r++) {
+                for(let c=0; c<nextword.matrix[r].length; c++) {
+                    if(nextword.matrix[r][c] && playfield[nextword.row+r][nextword.col+c] != 0) {
+                        gameOver();
+                        return;
+                        }
+                    }
+            }
+            currentFallingWord = nextword;
+            updateCurrentWordDisplay();
+        }
+        function loop() {
+             rAF=requestAnimationFrame(loop);
+            if(!gameActive){return; }
+            context.clearRect(0,0,canvas.width,canvas.height);
+            for(let r=0; r<10; r++) {
+            for(let c=0; c<10; c++) {
+                if(playfield[r][c]) {
+                    if(currentFallingWord.matrix.length == 3) {
+                    context.fillStyle='#f2f6faff'; 
+                    context.fillRect(c*grid, r*grid, grid-1, grid-1);
+                    context.fillRect((c+1)*grid, r*grid, grid-1, grid-1);
+                    context.fillRect((c+2)*grid, r*grid, grid-1, grid-1);
+                } else if(currentFallingWord.matrix.length == 2) {
+                    context.fillStyle='#f2f6faff'; 
+                    context.fillRect(c*grid, r*grid, grid-1, grid-1);
+                    context.fillRect((c+1) * grid, r*grid, grid-1, grid-1);
+                } else {
+                    context.fillStyle='#f2f6faff'; 
+                    context.fillRect(c*grid, r*grid, grid-1, grid-1);
+                    }
+                }
+            }
+        }
+            if(currentFallingWord){
+                context.fillStyle='#020202ff';
+                for(let r=0;r<currentFallingWord.matrix.length;r++) for(let c=0;c<currentFallingWord.matrix[r].length;c++)
+                    if(currentFallingWord.matrix[r][c]){
+                        if(c == 0){
+                            if (currentFallingWord.displayText.length > 10){
+                          context.fillStyle='#020202ff';
+                          context.fillRect((currentFallingWord.col+c+1)*grid,(currentFallingWord.row+r)*grid,grid,grid);
+                          context.fillRect((currentFallingWord.col+c+2)*grid,(currentFallingWord.row+r)*grid,grid,grid);  
+                          context.fillRect((currentFallingWord.col+c)*grid,(currentFallingWord.row+r)*grid,grid,grid);
+                          context.fillStyle='white'; context.font='12px Arial'; context.textAlign='left'; context.textBaseline='middle';
+                          context.fillText(currentFallingWord.displayText,(currentFallingWord.col+c)*grid+4,(currentFallingWord.row+r)*grid+grid/2);
+                            }
+                            else if (currentFallingWord.displayText.length > 5) {
+                          context.fillStyle='#020202ff';
+                          context.fillRect((currentFallingWord.col+c+1)*grid,(currentFallingWord.row+r)*grid,grid,grid); 
+                          context.fillRect((currentFallingWord.col+c)*grid,(currentFallingWord.row+r)*grid,grid,grid);
+                          context.fillStyle='white'; context.font='12px Arial'; context.textAlign='left'; context.textBaseline='middle';
+                          context.fillText(currentFallingWord.displayText,(currentFallingWord.col+c)*grid+4,(currentFallingWord.row+r)*grid+grid/2);  
+                            }
+                            else{
+                            context.fillRect((currentFallingWord.col+c)*grid,(currentFallingWord.row+r)*grid,grid-1,grid-1);
+                            context.fillStyle='white'; context.font='12px Arial'; context.textAlign='center'; context.textBaseline='middle';
+                            context.fillText(currentFallingWord.displayText,(currentFallingWord.col+c)*grid+grid/2,(currentFallingWord.row+r)*grid+grid/2);
+                            context.fillStyle='#e53e3e';
+                            }
+                        }   
+
+                    }
+                if(++count > speed){
+                    const newRow=currentFallingWord.row+1;
+                    if(!isValidMove(currentFallingWord.matrix,newRow,currentFallingWord.col)) placeTetromino();
+                    else currentFallingWord.row=newRow;
+                    if (hintOn) placeHintWord();
+                    count=0;
+                }
+            }
+        }
+    rAF=requestAnimationFrame(loop);
+    </script>
+</body>
+</html>
