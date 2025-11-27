@@ -1,0 +1,63 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{% static 'Stylesheet.css' %}">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="navbar_box">
+            <a href="{% url 'home' %}" id="navbar_logo">Fuo</a>
+            <div class="navbar_toggle" id="mobile_menu">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+            <ul class="navbar_menu">
+                <li class="navbar_item">
+                    <a href="{% url 'home' %}" class="navbar_links">Home</a>
+                </li>
+                <li class="navbar_item">
+                    {% if user.is_authenticated %}
+                        <p>Logged in as {{ user.username }} | <form method="post" action="{% url 'logout' %}" style="display:inline;">
+                                                                {% csrf_token %}
+                                                                <button type="submit" class ='button'>Logout!</button>
+                                                                </form></p>
+                    {% else %}
+                        <a href="{% url 'login' %}" class="button">Sign In!</a>
+                    {% endif %}
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <div class="game_start">
+        <div class="game_container">
+            <div class="game_content">
+
+
+                <div class="feature_cards">
+                    <div class="feature_card">
+                        <h3>Create an Account</h3>
+                        <form method="post">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+
+                    <button type="submit">Sign Up</button>
+    </form>
+            <p>        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <p>Already have an account? <a href="{% url 'login' %}">Log in</a></p>
+</body>
+</html>
